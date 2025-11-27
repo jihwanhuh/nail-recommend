@@ -1,0 +1,16 @@
+fastapi
+uvicorn
+streamlit
+numpy
+pillow
+opencv-python
+pandas
+ultralytics
+requests
+segment-anything-hq
+python-multipart
+
+torch
+torchvision
+torchaudio
+--index-url https://download.pytorch.org/whl/cpu
