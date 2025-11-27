@@ -1,183 +1,225 @@
-# Nail Recommendation System
+# NailFit - Nail Recommendation System  
+YOLO 기반 손톱 인식 + 텍스트 기반 네일 Shape·Design 추천 모델
 
-YOLO 기반 손톱 인식 + 텍스트 분석 기반 네일 쉐입·디자인 추천 모델
+---
 
 ## 1. 프로젝트 개요
 
-본 프로젝트는 손 사진 한 장으로 손톱을 인식하고
-길이/너비 특징을 계산한 뒤
-블로그 텍스트 기반 추천 룰을 적용하여 
-가장 잘 어울리는 네일 쉐입 및 어울리는 네일 디자인 TOP3
-을 제안하는 시스템 입니다
+본 프로젝트는 **손 사진 한 장**을 입력받아  
 
-## 2. 폴더 구조
-sbhc4
-│
-├── 01_data_text_rule/
-│   ├── 01_naver-search.ipynb
-│   ├── 02_blog-contents.ipynb
-│   ├── 03_naver-search-content.ipynb
-│   ├── 04_keyword-analysis.ipynb
-│   ├── basic_data/
-│   │   ├── 02_shape_rule_result.csv
-│   │   ├── 03_design_rule_result.csv
-│   │   ├── 04_group_shape_design_rule.csv
-│   └── craw_download_file/
-│
-├── 02_nail_seg_yolo/
-│   ├── YOLOv11.ipynb
-│   └── best.pt
-│
-├── 03_nail_recommend/
-│   ├── SAM_HQ_ViT_H.ipynb
-│   └── 손톱길이_모양_판별.ipynb
-│
+1) YOLOv11 기반 **손톱 위치 탐지**,  
+2) SAM-HQ 기반 **고품질 손톱 마스크 생성**,  
+3) OpenCV 기반 **길이·너비 측정**,  
+4) 네이버 블로그 텍스트 분석 기반 **Shape·Design 추천 룰 생성**  
+
+을 수행하여  
+**가장 잘 어울리는 네일 쉐입(shape)과 디자인 TOP3**를 자동 추천하는 시스템입니다.
+
+---
+
+## 2. 폴더 구조  
+  
+sbhc4  
+│  
+├── 01_data_text_rule/ # 텍스트 수집·분석 → 추천 룰 생성  
+│ ├── 01_naver-search.ipynb  
+│ ├── 02_blog-contents.ipynb  
+│ ├── 03_naver-search-content.ipynb  
+│ ├── 04_keyword-analysis.ipynb  
+│ ├── basic_data/  
+│ │ ├── 02_shape_rule_result.csv  
+│ │ ├── 03_design_rule_result.csv  
+│ │ ├── 04_group_shape_design_rule.csv  
+│ └── craw_download_file/  
+│  
+├── 02_nail_seg_yolo/ # YOLO 기반 손톱 bbox 탐지  
+│ ├── YOLOv11.ipynb  
+│ └── best.pt  
+│  
+├── 03_nail_recommend/ # 길이·너비 계산 + 추천 모델 연동  
+│ ├── SAM_HQ_ViT_H.ipynb  
+│ └── 손톱길이_모양_판별.ipynb  
+│  
+├── 04_pt_video/ # 데모 앱 (YOLO+SAM+추천)  
+│ ├── app.py # run_pipeline() 통합 파이프라인  
+│ ├── ui.py # Gradio 데모 인터페이스  
+│ └── oval_glitter.png # 데모용 디자인 PNG (합성용)  
+│  
 └── README.md
+  
+---  
+  
+## 3. 전체 파이프라인  
+  
+[01_data_text_rule]  
+├─ ① 네이버 검색결과 수집  
+├─ ② 블로그 본문 크롤링  
+├─ ③ 문장 기반 Shape 문맥 추출  
+└─ ④ Shape → Design 규칙 생성  
+↓  
+(04_group_shape_design_rule.csv)  
+↓  
+[02_nail_seg_yolo]  
+└─ YOLOv11 손톱 인식 → bbox  
+↓  
+[03_nail_recommend]  
+├─ SAM-HQ 손톱 마스크 생성  
+├─ 길이/너비 측정 → 타입 분류(6종)  
+└─ 텍스트 기반 룰로 Shape/Design 추천  
+↓  
+[04_pt_video]  
+└─ run_pipeline() 실행 → 결과 이미지/추천 TOP3 출력  
+  
 
-
-## 3. 전체 파이프라인
-[01_data_text_rule]
-   │
-   ├─ ① 네이버 검색결과 수집
-   ├─ ② 블로그 본문 수집
-   ├─ ③ 문장 기반 Shape 문맥 추출
-   └─ ④ Shape → Design 룰 생성
-        ↓
-[Shape/Design Prob CSV]
-        ↓
-[02_nail_seg_yolo]
-   └─ YOLO 손톱 인식 → bbox
-        ↓
-[03_nail_recommend]
-   ├─ SAM 손톱 마스크 생성
-   ├─ 길이/너비 측정 → 타입 분류
-   └─ 룰 CSV 기반 Shape·Design 추천
-        ↓
-[최종 출력]
-"길이-너비 타입", "추천 쉐입", "추천 디자인 TOP3"
+---
 
 ## 4. 단계별 상세 설명
+
 ### 4.1 텍스트 기반 추천 룰 생성 (01_data_text_rule)
-#### ● 01_naver-search.ipynb
 
-네이버 블로그 검색결과를 크롤링하는 단계
+#### ● 01_naver-search.ipynb  
+네이버 검색 자동화(Selenium)로  
+블로그 제목·링크·날짜 데이터를 수집.  
 
-키워드 기반으로 블로그 검색결과(제목·작성자·날짜·링크)를 수집
-후반부에 **키워드 분석(등장 단어 빈도 분석)**이 포함되어 있음
-네일 디자인/색상/패턴 관련 단어가 어떤 빈도로 등장하는지 확인
+키워드 등장 빈도 분석 포함 → 네일 색상·쉐입·패턴 단어 군집 확인 가능.
 
-#### ● 02_blog-contents.ipynb
+---
 
-블로그 링크 목록을 바탕으로 실제 블로그 본문을 수집하는 단계
+#### ● 02_blog-contents.ipynb  
+블로그 링크를 실제로 열어 본문을 수집하는 단계.
 
-- iframe 내부 본문 파싱
-- full_text 생성
-- 이미지 경로 필터링
+- iframe 내부 본문 추출
+- HTML 제거 → `full_text` 생성
+- postfiles 이미지 필터링
 
-길이·너비 → 쉐입 추천 빈도를 수동으로 조사한 내용을 기반으로 규칙 생성
-(02_shape_rule_result.csv)
+추가로,  
+**길이·너비 → Shape 수동 조사표**를 기반으로  
+초기 shape 분포(02_shape_rule_result.csv) 계산.
 
-→ 즉, **손톱 길이/너비에 따른 Shape 추천 규칙(초기 수동 버전)**을 만든 단계입니다.
+---
 
-#### ● 03_naver-search-content.ipynb
+#### ● 03_naver-search-content.ipynb  
+검색결과 + 본문 텍스트를 통합.
 
-위 1·2번 과정을 통합:
-
-- 네이버 검색결과
-- 블로그 본문(full_text)
+- 제목
+- 작성자
+- 날짜
+- full_text  
 - 이미지 개수
 
-를 하나의 데이터프레임으로 정리하는 단계
+※ 이미지 데이터는 품질·저작권 문제로 모델에 사용하지 않음.
 
-※ 이미지도 수집했지만, 저작권/데이터 정제 문제로 실제 모델에는 사용하지 않음.
+---
 
-#### ● 04_keyword-analysis.ipynb
+#### ● 04_keyword-analysis.ipynb  
+텍스트 기반 Shape/Design 추천 모델 핵심 단계.
 
-텍스트 기반 추천 룰 생성 단계
+작업 내용:
+- Shape/Design 키워드 사전 구축  
+- 변형어(예: 오벌/오발/oval) 정규화  
+- 문장 단위 shape 문맥 추출  
+- noise 제거  
+- 조건부 확률  
+P(design | shape)
 
-주요 작업
- Shape & Design 키워드 사전 구축
+yaml
+코드 복사
+계산
 
-round / square / oval / almond / squoval
-glitter / french / nudes / ombre / art
+**결과물**
 
-변형어(“오벌/오발/oval”, “스쿠오발/squoval” 등) 정규화 처리
+| 파일명 | 내용 |
+|--------|------|
+| 03_design_rule_result.csv | Shape → Design 추천 확률 |
+| 04_group_shape_design_rule.csv | 길이·너비 × Shape × Design 결합 모델 |
 
-- Shape 문맥 기반 문장 추출
+---
 
-문장에서 shape 단어가 등장한 구문만 분석
-노이즈 단어 제거(매장명 등)
-
-- 디자인 키워드 카운팅
-
-shape → design 조합이 얼마나 나타나는지 분석
-조건부 확률 기반 테이블 생성
-
-결과물:
-
-파일명	의미
-03_design_rule_result.csv	Shape → Design 확률
-04_group_shape_design_rule.csv	길이·너비 및 Shape 기반 추천 룰 완성
 ### 4.2 손톱 인식 (02_nail_seg_yolo)
-#### ● YOLOv11.ipynb
 
-best.pt 모델을 기반으로:
+#### ● YOLOv11.ipynb  
+best.pt 모델을 이용해:
 
-손 사진에서 손톱 bbox 탐지
-ROI(손톱 영역) 추출
+- 손톱 bbox 탐지  
+- ROI(손톱 영역) 추출
 
-### 4.3 길이·너비 측정 + 추천 (03_nail_recommend)
-#### ● SAM_HQ_ViT_H.ipynb
+---
 
-YOLO의 bbox 안에 대해 SAM-HQ segmentation을 수행하여:
-손톱 mask 생성
-윤곽을 기반으로 길이(height), 너비(width) 측정
+### 4.3 길이·너비 측정 및 추천 (03_nail_recommend)
 
-#### ● 손톱길이_모양_판별.ipynb
+#### ● SAM_HQ_ViT_H.ipynb  
+YOLO bbox를 입력 받아 SAM-HQ로:
 
-- 길이·너비 비율 기반 타입 분류
-길이: short / mid / long
-너비: narrow / wide
+- 고품질 손톱 마스크 생성  
+- 마스크 윤곽 기반 길이/너비 측정  
 
-조합으로 6개 group_id(L_N, L_W, M_N …) 룰 CSV 불러오기
+---
 
-- Shape & Design 추천
+#### ● 손톱길이_모양_판별.ipynb  
+OpenCV 측정값을 기반으로 **6개 타입으로 분류**
 
-길이-너비 타입 분류: long-narrow
-추천 쉐입 & 디자인 TOP 3 : square-glitter, square-ombre, square-art  
+L_N, L_W, M_N, M_W, S_N, S_W
 
-추천 결과 생성
+yaml
+코드 복사
+
+이후 추천 룰 CSV를 불러와:
+
+- `P(shape | length,width)`
+- `P(design | shape)`
+
+결합하여 **Shape/Design TOP3 추천** 생성.
+
+---
 
 ## 5. 사용된 데이터 요약
-파일	내용
-- 02_shape_rule_result.csv	길이/너비 → Shape 확률 (초기 규칙)
-- 03_design_rule_result.csv	Shape → Design 확률
-- 04_group_shape_design_rule.csv	길이·너비 × Shape × Design 결합 확률
+
+| 파일명 | 내용 |
+|--------|------|
+| 02_shape_rule_result.csv | 길이·너비 → Shape 확률(초기 규칙) |
+| 03_design_rule_result.csv | Shape → Design 확률 |
+| 04_group_shape_design_rule.csv | 최종 결합 규칙(150개 조합) |
+
+---
+
 ## 6. 실행 순서
 
-- 02_nail_seg_yolo/YOLOv11.ipynb 실행 → 손톱 bbox 추출
-- 03_nail_recommend/SAM_HQ_ViT_H.ipynb 실행 → mask + 길이·너비 계산
-- 03_nail_recommend/손톱길이_모양_판별.ipynb 실행 → 최종 추천 출력
+1. **02_nail_seg_yolo/YOLOv11.ipynb** → 손톱 bbox 추출  
+2. **03_nail_recommend/SAM_HQ_ViT_H.ipynb** → 마스크 + 길이/너비 계산  
+3. **03_nail_recommend/손톱길이_모양_판별.ipynb** → 추천 TOP3 출력  
 
-텍스트 기반 룰을 갱신할 경우:
-01_data_text_rule/04_keyword-analysis.ipynb 재실행
+텍스트 분석 룰 갱신 필요 시:  
+→ `01_data_text_rule/04_keyword-analysis.ipynb` 재실행
+
+04_pt_video(app.py, ui.py)은  
+**데모용 통합 파이프라인**으로 구성됨.
+
+---
 
 ## 7. 팀원 역할
-팀원	담당
-- 허지환 : 크롤링 / 텍스트 분석 / 추천 룰 생성 (01단계)
-- 양승혜	: YOLO 학습 및 손톱 인식 (02단계)
-- 박소연	: 길이·너비 측정 및 추천 연결 (03단계)
+
+| 팀원 | 담당                            |
+|------|-------------------------------|
+| 허지환 | 텍스트 수집·정제·추천 룰 생성             |
+| 양승혜 | YOLOv11 학습 및 손톱 인식, 시연용 버전 제작 |
+| 박소연 | SAM 기반 길이·너비 측정 및 추천 연결       |
+
+---
+
 ## 8. 프로젝트 현황 및 한계
 
-이미지 데이터는 수집했으나 정제 문제 등으로 미사용
-텍스트 기반 분석하여 규칙 생성
-손톱 이미지 자동 분류(길이·너비)는 개선 여지 있음
-텍스트 분석 기반 Shape/Design 분류체계를 더 확장 가능
+- 이미지 크롤링 데이터는 정제 한계로 미사용  
+- Shape/Design 추천이 텍스트 기반 규칙 모델에 한정됨  
+- 길이·너비 분류 품질이 SAM 마스크에 크게 의존  
+- 색상, 피부톤 등 고급 요인은 모델에 미포함  
+- 디자인 PNG 합성은 데모 기능 수준으로 구현됨  
+
+---
 
 ## 9. 향후 개선 방향
 
-손톱 모양 외 다른 요인 추가
-색상(Color) 추천 모델 추가
-CNN 기반 Shape 자동 분류 학습
-실 사용자 테스트 기반 모델 튜닝
-API 연결 및 프론트엔드 프로토타입 제작
+- CNN 기반 Shape 자동 분류 모델 개발  
+- 손가락 길이·피부톤 반영한 종합 추천 모델  
+- 네일 색상 추천(컬러 팔레트 기반) 확장  
+- 사용자 평가 기반 추천 규칙 보정  
+- API 및 UI 프로토타입 기반 서비스화  
