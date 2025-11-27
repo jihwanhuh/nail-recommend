@@ -15,13 +15,16 @@ from ultralytics import YOLO
 from segment_anything_hq import sam_model_registry, SamPredictor
 from PIL import Image
 
+# 다운로드 sam_hq_vit_h.pth
+# !wget -O /content/sam_hq_vit_h.pth https://huggingface.co/lkeab/hq-sam/resolve/main/sam_hq_vit_h.pth
+
 # ---------- 경로 설정 ----------
-YOLO_MODEL_PATH = "/content/best.pt"
-SAM_CHECKPOINT_PATH = "/content/sam_hq_vit_h.pth"
-DESIGN_CSV_PATH = "/content/nail_design_recommend_table.csv"
+YOLO_MODEL_PATH = "../02_nail_seg_yolo/best.pt"
+SAM_CHECKPOINT_PATH = "sam_hq_vit_h.pth" #
+DESIGN_CSV_PATH = "../01_data_text_rule/basic_data/04_group_shape_design_rule.csv"
 
 # PNG 합성용 디렉토리
-PNG_DIR = "/content/nail_png"   # PNG들을 저장하는 폴더 (예: oval_glitter.png)
+PNG_DIR = "../04_pt_video"   # PNG들을 저장하는 폴더 (예: oval_glitter.png)
 
 
 # ---------- 추천 테이블 로드 ----------
