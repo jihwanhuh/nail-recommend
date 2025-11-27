@@ -1,3 +1,6 @@
+[새싹 헬스케어 서비스 기획자 부트캠프 4기] Final Project  
+4조 - 네일을 바꿔조  
+
 # NailFit - Nail Recommendation System  
 YOLO 기반 손톱 인식 + 텍스트 기반 네일 Shape·Design 추천 모델
 
